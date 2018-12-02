@@ -1,0 +1,290 @@
+---
+title: "Porn Star Scrape"
+output: html_notebook
+---
+
+Goal: 
+identify what makes a porn star get better ranking
+what make her have better rating / view
+
+```{r,message=FALSE}
+set.seed(10000)
+library(rvest)
+library(XML)
+library(RCurl)
+library(dplyr)
+library(stringr)
+library(truncnorm)
+library(readr)
+library(lubridate)
+library(scales)
+# library(chron)
+```
+
+
+# get all the pages links
+last page
+```{r}
+# need to go to page 2 to have the option of going to last page
+lastpage = read_html('https://www.pornhub.com/pornstars?gender=female&page=2') %>%
+  html_nodes('.page_smoothing') %>% html_text()
+# last button number is the last page
+lastpage = lastpage[length(lastpage)] 
+
+pagenums = (1:lastpage %>% as.numeric()) %>% as.character()
+# pagenum = paste0('&page=',pagenum) 
+# pagelinks = paste0(base, pagenum)
+
+# pagenums = (1:10) %>% as.character()
+```
+
+
+~ get all the link of stars
+
+```{r}
+getStarsLink = function( pagenum, base = 'https://www.pornhub.com/pornstars?gender=female&page=') {
+  # get all the links on one page
+  time1 = truncnorm::rtruncnorm(1, a = 10, b = 40, mean = 20)
+  Sys.sleep(time1)
+  print(c(pagenum, time1))
+  base = paste0(base, pagenum)
+  link = base %>% read_html()
+  
+  relative_link = link %>% html_nodes('.js-mxp') %>% html_attr('href')
+  # dedup by only picking the odd idx
+  idx = seq(1,length(relative_link)) %%2 >0  
+  relative_link = relative_link[idx]
+  relative_link %>% sapply(function(i) getRelativeURL(u = i, baseURL = base))
+}
+
+# pagenums = sample(pagenums, size = length(pagenums))
+# star.links = pagenums[120:130] %>% sapply( function(num) getStarsLink(num))
+# # star.links1 = star.links1[1:10]
+# # getStarsLink('128')
+# star.links2 = pagenums[1:50] %>% sapply( function(num) getStarsLink(num))
+# star.links3 = pagenums[51:119] %>% sapply( function(num) getStarsLink(num))
+# star.links4 = pagenums[131:207] %>% sapply( function(num) getStarsLink(num))
+
+# star.links.all = c(star.links, star.links1,star.links2,star.links3, star.links4) %>% unlist
+# df.link = data.frame(link = star.links.all %>% unlist)
+# df.link %>% write.csv('porn_star_link.csv', row.names = F)
+```
+
+
+
+~ parse through all the links to collect info
+
+```{r}
+# prevent character(0) to distort data
+detectCharZero = function(i) {
+  if (length(i) == 0) {
+    i = NA
+  } 
+  i 
+}
+
+```
+
+
+# parse star bio
+```{r}
+
+# star1 = 'https://www.pornhub.com/pornstar/tachy-cardia' %>% read_html()
+# blob about info
+
+star.link = star.link1
+parseStar = function(star.link) {
+  time1 = truncnorm::rtruncnorm(1, a = 5, b = 10, mean = 7)
+  Sys.sleep(time1)
+  print(c(star.link, time1))
+  m = rep(0,14)
+  star1 = star.link %>% read_html()
+
+    # ranking data
+    
+    rank_info = star1 %>% html_nodes(".big") %>% html_text()
+    rank= star1 %>% html_nodes(".rankingInfo span") %>% html_text() %>% .[1]
+    video_view = star1 %>% html_nodes(".infoBox.videoViews.tooltipTrig span") %>% html_text() 
+    subscribe = star1 %>% html_nodes(".infoBox.subscribers span") %>% html_text() 
+    
+    
+  # sample vid data
+    
+    m1 = cbind(star1 %>% html_nodes('.index-length') %>% html_text(),
+          star1 %>% html_nodes('.index-views') %>% html_text(),
+           star1 %>% html_nodes('.index-rating') %>% html_text()
+    ) 
+   
+    # if (length(m1)==0) {
+    #   vid_length = NA; vid_views = NA; vid_rating=NA
+    #   
+    # } else {
+    # colnames(m1) = m1[1,]
+    # m1 = m1[-1,] %>% as.data.frame(stringsAsFactors = F)
+    # 
+    # t1 = strptime(m1$Length,"%M:%S")
+    # 
+    # vid_length = mean(t1$sec + t1$min * 60, na.rm = T)
+    #  vid_views =  m1$Views %>% str_remove_all('\\,') %>% as.numeric() %>% mean(na.rm = T) 
+    #   vid_rating = m1$Rating %>% 
+    #   str_remove_all("\\%") %>%
+    #   as.numeric() %>% mean(na.rm = T)
+    #   
+    # }
+
+    # bio data
+    name = star1 %>% html_nodes("h1") %>% html_text() %>%
+      str_remove_all("[\\n]") %>%
+      str_remove_all("[\\t]")
+    
+    info =  star1 %>% 
+      html_nodes(".infoPiece") %>% html_text()
+    info_text = info %>% paste(collapse = ',')
+    gender = info[info %>% str_detect("Gender")]
+    
+    # %>% str_remove_all('.*.+\\t')%>%
+    #   str_remove('.+\\n')
+    age = star1 %>% html_nodes('.infoPiece:nth-child(2) .smallInfo') %>% html_text()
+    measurements = info[info %>% str_detect("Measurements")]
+    height = info[info %>% str_detect("Height")]
+    weight = info[info %>% str_detect('Weight')]
+    profile_view =info[info %>% str_detect("Pornstar Profile Views")] 
+    status =info[info %>% str_detect("Status")] 
+    orientation = info[info %>% str_detect("Interested")] 
+    verified = star1 %>% html_nodes('.verifiedIcon') %>% length
+    
+    # put all together
+    m[1] = name %>% detectCharZero; m[2]= gender %>% detectCharZero; m[3] =age %>% detectCharZero; m[4]= measurements %>% detectCharZero; m[5] = height %>% detectCharZero; m[6] = profile_view %>% detectCharZero; m[7] = status %>% detectCharZero; m[8] = orientation %>% detectCharZero; m[9] = subscribe %>% detectCharZero; m[10] = video_view %>% detectCharZero; m[11] = rank %>% detectCharZero; m[12] = weight %>% detectCharZero(); m[13] = info_text %>% detectCharZero() ;  m[14] = verified %>% detectCharZero()
+
+    m
+
+}
+```
+
+```{r}
+star.link = read_csv('porn_star_link.csv')$link
+idx = star.link %>% str_detect('lana-rhoades') %>% which
+# top 10 stars link
+star.link.samp = star.link[c(idx:(idx+200))]
+star.link1 = star.link[idx]
+b1 = star.link.samp %>% sapply(parseStar)
+df1 = b1 %>% t() %>%  as.data.frame()
+
+colnames(df1) = c('name', 'gender', 'age', 'measurements', 'height', 'profile_view', 'status', 'orientation', 'subscribe', 'video_view', 'rank', 'weight', 'info_text', 'verified')
+
+```
+
+str cleaning
+```{r}
+df1 = read_csv('porn_out10.csv')
+df1 %>% head
+```
+
+
+
+
+```{r}
+convertNum = function(str){
+  # convert 32k to 32000
+  if (str %>% str_detect('K')) {
+    str = str %>% str_extract('([0-9]+\\,*\\.*)+') %>% str_remove_all(',') %>% as.numeric() *1000
+  } else if (str %>% str_detect('M')){
+    str = str %>% str_extract('([0-9]+\\,*\\.*)+') %>% str_remove_all(',') %>% as.numeric() *1000000
+  } else {
+    str = str %>% str_extract('([0-9]+\\,*\\.*)+') %>% str_remove_all(',') %>% as.numeric()
+  }
+  str
+}
+# convertNum('580,620,017')
+library(eeptools)
+ageFunc = function(age){
+  if (str_detect(age, '^[0-9]{4}')) {
+    age = age %>% ymd
+  } else if (str_detect(age, '[0-9]{4}$')) {
+    age = age %>% mdy
+  }
+  age_calc(age,units = 'years')
+}
+# ageFunc('1993-02-10')
+# df1[2,]$video_view %>% convertNum
+# df1 %>% write.csv('porn_out10.csv', row.names = F)
+
+```
+
+
+```{r}
+
+df.bio = df1 %>% mutate(gender = ifelse(gender %>% str_detect('Male'), 'M', 'F'),
+               gender = ifelse(is.na(gender), 'F', gender),
+               # dimension vars
+               d1 = measurements %>% str_extract('[1-9]+[A-Z]'),
+               cup = d1 %>% str_extract('[A-Z]') %>% factor(levels = c('A', "B", "C",'D', 'E')),
+               d1 = d1 %>% str_remove_all('[A-Z]') %>% as.numeric(),
+               d2 = measurements %>% str_extract('-[1-9].-') %>% str_remove_all('-') %>% as.numeric(),
+               d3 = measurements %>% str_extract('[1-9].$') %>% str_remove_all('-') %>% as.numeric(),
+               status = status %>% str_detect('Active'),
+              subscribe =  subscribe %>% convertNum,
+              video_view1 = video_view %>%  convertNum, # buggy, to be fixed
+              height = height %>% str_extract('[0-9]+ cm') %>% str_remove(' cm') %>% as.numeric(),
+              weight = weight %>% str_extract('[0-9]+ lbs') %>% str_remove(' lbs')%>% as.numeric()
+               # age1 = age %>% ageFunc() # buggy
+               ) %>% 
+  select(gender, d1, d2,d3, cup, height, weight, status, subscribe, video_view1)
+
+df.bio1 = df.bio %>% 
+  mutate(score =  (.5* subscribe %>% log %>% rescale) + (.5* video_view1 %>% log %>% rescale) ) # score is a lin combo of both log view and subscribers standardardized (0-1)
+```
+```{r}
+df.bio1
+```
+
+```{r}
+library(GGally)
+ggpairs(df.bio1, columns = c('d1', 'd2', 'd3', 'cup', 'height', 'weight', 'video_view1', 'subscribe','score'))
+```
+
+
+```{r}
+df.bio1 = df.bio1 %>% filter(!is.na(score))
+df.bio1 %>% sapply(anyNA)
+cor(df.bio1$weight,df.bio1$height)
+fit1 = lm(score ~d1 + d2 + d3 + cup + height + weight, data = df.bio1)
+
+summary(fit1) 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
