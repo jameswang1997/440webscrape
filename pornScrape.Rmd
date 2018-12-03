@@ -18,6 +18,7 @@ library(truncnorm)
 library(readr)
 library(lubridate)
 library(scales)
+knitr::opts_chunk$set(echo = FALSE)
 # library(chron)
 ```
 
@@ -92,11 +93,10 @@ detectCharZero = function(i) {
 # star1 = 'https://www.pornhub.com/pornstar/tachy-cardia' %>% read_html()
 # blob about info
 
-star.link = star.link1
 parseStar = function(star.link) {
   time1 = truncnorm::rtruncnorm(1, a = 5, b = 10, mean = 7)
   Sys.sleep(time1)
-  print(c(star.link, time1))
+  # print(c(star.link, time1))
   m = rep(0,14)
   star1 = star.link %>% read_html()
 
@@ -161,22 +161,26 @@ parseStar = function(star.link) {
 }
 ```
 
-```{r}
+```{r, cache = TRUE}
 star.link = read_csv('porn_star_link.csv')$link
 idx = star.link %>% str_detect('lana-rhoades') %>% which
-# top 10 stars link
-star.link.samp = star.link[c(idx:(idx+200))]
+# star.link.samp = star.link[c(idx:(idx+200))]
+star.link.samp = star.link[c(501:1000)]
+
+
 star.link1 = star.link[idx]
 b1 = star.link.samp %>% sapply(parseStar)
 df1 = b1 %>% t() %>%  as.data.frame()
 
 colnames(df1) = c('name', 'gender', 'age', 'measurements', 'height', 'profile_view', 'status', 'orientation', 'subscribe', 'video_view', 'rank', 'weight', 'info_text', 'verified')
-
+# df1 %>% dim
+# df1 %>% head
+write.csv(df1, 'star_bio2.csv', row.names = F)
 ```
 
 str cleaning
 ```{r}
-df1 = read_csv('porn_out10.csv')
+df1 = read_csv('star_bio.csv')
 df1 %>% head
 ```
 
@@ -229,14 +233,12 @@ df.bio = df1 %>% mutate(gender = ifelse(gender %>% str_detect('Male'), 'M', 'F')
               weight = weight %>% str_extract('[0-9]+ lbs') %>% str_remove(' lbs')%>% as.numeric()
                # age1 = age %>% ageFunc() # buggy
                ) %>% 
-  select(gender, d1, d2,d3, cup, height, weight, status, subscribe, video_view1)
+  dplyr::select(gender, d1, d2,d3, cup, height, weight, status, subscribe, video_view1)
 
 df.bio1 = df.bio %>% 
   mutate(score =  (.5* subscribe %>% log %>% rescale) + (.5* video_view1 %>% log %>% rescale) ) # score is a lin combo of both log view and subscribers standardardized (0-1)
 ```
-```{r}
-df.bio1
-```
+
 
 ```{r}
 library(GGally)
@@ -245,10 +247,13 @@ ggpairs(df.bio1, columns = c('d1', 'd2', 'd3', 'cup', 'height', 'weight', 'video
 
 
 ```{r}
-df.bio1 = df.bio1 %>% filter(!is.na(score))
-df.bio1 %>% sapply(anyNA)
+# df.bio1 = df.bio1 %>% filter(!is.na(score))
+df.bio1 %>% dim
+df.bio1$video_view1 %>% summary
+
+
 cor(df.bio1$weight,df.bio1$height)
-fit1 = lm(score ~d1 + d2 + d3 + cup + height + weight, data = df.bio1)
+fit1 = lm(log(video_view1) ~d1 + d2 + d3 + cup + height + weight, data = df.bio1)
 
 summary(fit1) 
 ```
