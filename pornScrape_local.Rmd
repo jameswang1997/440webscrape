@@ -161,10 +161,61 @@ parseStar = function(star.link) {
 }
 ```
 
+```{r}
+parseVid = function(link) {
+  star1 = link %>% read_html()
+    m1 = cbind(
+      star1 %>% html_nodes('.index-actors') %>% html_text() %>% str_trim(),
+      star1 %>% html_nodes('.index-length') %>% html_text(),
+          star1 %>% html_nodes('.index-views') %>% html_text(),
+           star1 %>% html_nodes('.index-rating') %>% html_text(),
+          star1 %>% html_nodes('.index-title') %>% html_text() %>% str_trim()
+    ) 
+    if (length(m1)==0) {
+         m1 = data.frame(star = NA, Actors = NA, Length = NA, Views = NA, Rating=NA, Title = NA, Title_ct = NA)
+      
+    } else {
+        colnames(m1) = m1[1,]
+        m1 = m1[-1,] %>% as.data.frame(stringsAsFactors = F)
+    
+        t1 = strptime(m1$Length,"%M:%S")
+        
+        
+        m1 = m1 %>% mutate(
+          star = link %>% str_extract('pornstar/.+') %>% str_remove('pornstar/'),
+          Actors = Actors %>% str_count("\\,") + 2,
+          Length = t1$sec / 60 + t1$min,
+          Rating = Rating %>%  str_remove_all("\\%") %>% as.numeric(),
+          Title = `Video Name`,
+          Title_ct = Title %>% nchar
+        ) %>% dplyr::select(-`Video Name`)
+    }
+  time1 = truncnorm::rtruncnorm(1, a = 3, b = 10, mean = 5)
+  Sys.sleep(time1)
+  return(m1 %>% as.matrix) 
+}
+
+# parseVid('https://www.pornhub.com/pornstar/riley-reid')
+
+```
+
+
 ```{r, cache = TRUE}
 star.link = read_csv('porn_star_link.csv')$link
-# idx = star.link %>% str_detect('lana-rhoades') %>% which
-# # star.link.samp = star.link[c(idx:(idx+200))]
+idx = star.link %>% str_detect('lana-rhoades') %>% which
+star.link.samp = star.link[c(idx:(idx+100))]
+
+d = star.link.samp %>% sapply(parseVid)
+
+df.vid = do.call(rbind, d) %>% as.data.frame()
+df.vid %>% write.csv('df.vid.csv', row.names = F)
+# d %>% str
+```
+
+
+
+
+```{r}
 # star.link.samp = star.link[c(501:1000)]
 # 
 # star.link %>% length
@@ -278,6 +329,7 @@ summary(fit1)
 
 ```{r}
 d1 = read_csv("star_bio.csv")
+d1 %>% dim
 d2 = read_csv("star_bio1.csv")
 d3 = read_csv("star_bio2.csv")
 
