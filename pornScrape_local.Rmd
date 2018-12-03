@@ -163,9 +163,26 @@ parseStar = function(star.link) {
 
 ```{r, cache = TRUE}
 star.link = read_csv('porn_star_link.csv')$link
-idx = star.link %>% str_detect('lana-rhoades') %>% which
-# star.link.samp = star.link[c(idx:(idx+200))]
-star.link.samp = star.link[c(501:1000)]
+# idx = star.link %>% str_detect('lana-rhoades') %>% which
+# # star.link.samp = star.link[c(idx:(idx+200))]
+# star.link.samp = star.link[c(501:1000)]
+# 
+# star.link %>% length
+# 
+# idx = 1
+for (i in 1:round(length(star.link)/500)) {
+  print(i)
+  star.link.samp = star.link[c(idx:(idx+500))]
+  idx = idx +500
+  # print(c(i,idx, paste0('star_bio', i, '.csv')))
+  b1 = star.link.samp %>% sapply(parseStar)
+  df1 = b1 %>% t() %>%  as.data.frame()
+  colnames(df1) = c('name', 'gender', 'age', 'measurements', 'height', 'profile_view', 'status', 'orientation', 'subscribe', 'video_view', 'rank', 'weight', 'info_text', 'verified')
+  write.csv(df1, paste0('star_bio', i, '.csv'), row.names = F)
+}
+
+
+
 
 
 star.link1 = star.link[idx]
@@ -259,8 +276,23 @@ summary(fit1)
 ```
 
 
+```{r}
+d1 = read_csv("star_bio.csv")
+d2 = read_csv("star_bio1.csv")
+d3 = read_csv("star_bio2.csv")
 
+do.call(rbind, )
+```
 
+# bind all dfs
+```{r}
+x = c("star_bio.csv","star_bio1.csv","star_bio2.csv","star_bio3.csv")
+ allframes = lapply(x,function(x)read.csv(x))
+ sapply(allframes,nrow)
+
+ df.bind = do.call(rbind,allframes)
+write.csv(df.bind, 'star_bio_bind.csv', row.names = F)
+```
 
 
 
