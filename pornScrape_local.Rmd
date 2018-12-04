@@ -45,9 +45,8 @@ pagenums = (1:lastpage %>% as.numeric()) %>% as.character()
 ```{r}
 getStarsLink = function( pagenum, base = 'https://www.pornhub.com/pornstars?gender=female&page=') {
   # get all the links on one page
-  time1 = truncnorm::rtruncnorm(1, a = 10, b = 40, mean = 20)
+  time1 = truncnorm::rtruncnorm(1, a = 5, b = 10, mean = 7)
   Sys.sleep(time1)
-  print(c(pagenum, time1))
   base = paste0(base, pagenum)
   link = base %>% read_html()
   
@@ -58,17 +57,13 @@ getStarsLink = function( pagenum, base = 'https://www.pornhub.com/pornstars?gend
   relative_link %>% sapply(function(i) getRelativeURL(u = i, baseURL = base))
 }
 
-# pagenums = sample(pagenums, size = length(pagenums))
-# star.links = pagenums[120:130] %>% sapply( function(num) getStarsLink(num))
-# # star.links1 = star.links1[1:10]
-# # getStarsLink('128')
-# star.links2 = pagenums[1:50] %>% sapply( function(num) getStarsLink(num))
-# star.links3 = pagenums[51:119] %>% sapply( function(num) getStarsLink(num))
-# star.links4 = pagenums[131:207] %>% sapply( function(num) getStarsLink(num))
+ star.links = pagenums[1:10] %>% sapply( function(num) getStarsLink(num))
+ do.call(rbind, star.links %>% as.matrix)
+df=  star.links%>% unlist %>% as.data.frame()
 
-# star.links.all = c(star.links, star.links1,star.links2,star.links3, star.links4) %>% unlist
-# df.link = data.frame(link = star.links.all %>% unlist)
-# df.link %>% write.csv('porn_star_link.csv', row.names = F)
+star.link = df %>% gather(key = 'a', value = 'link')
+star.link %>% write.csv('porn_star_link1.csv', row.names = F)
+# star.link %>% dim
 ```
 
 
@@ -90,12 +85,12 @@ detectCharZero = function(i) {
 # parse star bio
 ```{r}
 
-# star1 = 'https://www.pornhub.com/pornstar/tachy-cardia' %>% read_html()
+star1 = 'https://www.pornhub.com/pornstar/tachy-cardia' %>% read_html()
 # blob about info
 
 parseStar = function(star.link) {
-  time1 = truncnorm::rtruncnorm(1, a = 5, b = 10, mean = 7)
-  Sys.sleep(time1)
+  # time1 = truncnorm::rtruncnorm(1, a = 5, b = 10, mean = 7)
+  # Sys.sleep(time1)
   # print(c(star.link, time1))
   m = rep(0,14)
   star1 = star.link %>% read_html()
@@ -106,32 +101,7 @@ parseStar = function(star.link) {
     rank= star1 %>% html_nodes(".rankingInfo span") %>% html_text() %>% .[1]
     video_view = star1 %>% html_nodes(".infoBox.videoViews.tooltipTrig span") %>% html_text() 
     subscribe = star1 %>% html_nodes(".infoBox.subscribers span") %>% html_text() 
-    
-    
-  # sample vid data
-    
-    m1 = cbind(star1 %>% html_nodes('.index-length') %>% html_text(),
-          star1 %>% html_nodes('.index-views') %>% html_text(),
-           star1 %>% html_nodes('.index-rating') %>% html_text()
-    ) 
-   
-    # if (length(m1)==0) {
-    #   vid_length = NA; vid_views = NA; vid_rating=NA
-    #   
-    # } else {
-    # colnames(m1) = m1[1,]
-    # m1 = m1[-1,] %>% as.data.frame(stringsAsFactors = F)
-    # 
-    # t1 = strptime(m1$Length,"%M:%S")
-    # 
-    # vid_length = mean(t1$sec + t1$min * 60, na.rm = T)
-    #  vid_views =  m1$Views %>% str_remove_all('\\,') %>% as.numeric() %>% mean(na.rm = T) 
-    #   vid_rating = m1$Rating %>% 
-    #   str_remove_all("\\%") %>%
-    #   as.numeric() %>% mean(na.rm = T)
-    #   
-    # }
-
+  
     # bio data
     name = star1 %>% html_nodes("h1") %>% html_text() %>%
       str_remove_all("[\\n]") %>%
@@ -141,9 +111,6 @@ parseStar = function(star.link) {
       html_nodes(".infoPiece") %>% html_text()
     info_text = info %>% paste(collapse = ',')
     gender = info[info %>% str_detect("Gender")]
-    
-    # %>% str_remove_all('.*.+\\t')%>%
-    #   str_remove('.+\\n')
     age = star1 %>% html_nodes('.infoPiece:nth-child(2) .smallInfo') %>% html_text()
     measurements = info[info %>% str_detect("Measurements")]
     height = info[info %>% str_detect("Height")]
@@ -156,13 +123,15 @@ parseStar = function(star.link) {
     # put all together
     m[1] = name %>% detectCharZero; m[2]= gender %>% detectCharZero; m[3] =age %>% detectCharZero; m[4]= measurements %>% detectCharZero; m[5] = height %>% detectCharZero; m[6] = profile_view %>% detectCharZero; m[7] = status %>% detectCharZero; m[8] = orientation %>% detectCharZero; m[9] = subscribe %>% detectCharZero; m[10] = video_view %>% detectCharZero; m[11] = rank %>% detectCharZero; m[12] = weight %>% detectCharZero(); m[13] = info_text %>% detectCharZero() ;  m[14] = verified %>% detectCharZero()
 
-    m
-
+    return(m)
 }
+# parseStar(star.link1)
 ```
 
 ```{r}
+link = 'https://www.pornhub.com/pornstar/lucy-cat'
 parseVid = function(link) {
+    print(link)
   star1 = link %>% read_html()
     m1 = cbind(
       star1 %>% html_nodes('.index-actors') %>% html_text() %>% str_trim(),
@@ -177,39 +146,44 @@ parseVid = function(link) {
     } else {
         colnames(m1) = m1[1,]
         m1 = m1[-1,] %>% as.data.frame(stringsAsFactors = F)
-    
-        t1 = strptime(m1$Length,"%M:%S")
+        if (nrow(m1) < 10) { # sanity check for edge cases
+          m1 = data.frame(star = NA, Actors = NA, Length = NA, Views = NA, Rating=NA, Title = NA, Title_ct = NA)
+        } else {
+          t1 = strptime(m1$Length,"%M:%S")
+          m1 = m1 %>% mutate(
+             star = link %>% str_extract('pornstar/.+') %>% str_remove('pornstar/'),
+             Actors = Actors %>% str_count("\\,") + 2,
+             Length = t1$sec / 60 + t1$min,
+             Rating = Rating %>%  str_remove_all("\\%") %>% as.numeric(),
+             Title = `Video Name`,
+             Title_ct = Title %>% nchar
+            ) %>% dplyr::select(-`Video Name`)
+        }
         
-        
-        m1 = m1 %>% mutate(
-          star = link %>% str_extract('pornstar/.+') %>% str_remove('pornstar/'),
-          Actors = Actors %>% str_count("\\,") + 2,
-          Length = t1$sec / 60 + t1$min,
-          Rating = Rating %>%  str_remove_all("\\%") %>% as.numeric(),
-          Title = `Video Name`,
-          Title_ct = Title %>% nchar
-        ) %>% dplyr::select(-`Video Name`)
     }
   time1 = truncnorm::rtruncnorm(1, a = 3, b = 10, mean = 5)
   Sys.sleep(time1)
+
   return(m1 %>% as.matrix) 
 }
 
 # parseVid('https://www.pornhub.com/pornstar/riley-reid')
-
+# parseVid(link)
 ```
 
 
 ```{r, cache = TRUE}
-star.link = read_csv('porn_star_link.csv')$link
-idx = star.link %>% str_detect('lana-rhoades') %>% which
+star.link = read_csv('porn_star_link1.csv')$link
+# star.link %>% head
+# idx = star.link %>% str_detect('lana-rhoades') %>% which
+idx = 1
 star.link.samp = star.link[c(idx:(idx+100))]
 
-d = star.link.samp %>% sapply(parseVid)
+d = star.link %>% sapply(parseVid)
 
 df.vid = do.call(rbind, d) %>% as.data.frame()
-df.vid %>% write.csv('df.vid.csv', row.names = F)
-# d %>% str
+df.vid %>% write.csv('df_vid_new.csv', row.names = F)
+df.vid %>% head
 ```
 
 
@@ -221,38 +195,29 @@ df.vid %>% write.csv('df.vid.csv', row.names = F)
 # star.link %>% length
 # 
 # idx = 1
-for (i in 1:round(length(star.link)/500)) {
-  print(i)
-  star.link.samp = star.link[c(idx:(idx+500))]
-  idx = idx +500
-  # print(c(i,idx, paste0('star_bio', i, '.csv')))
-  b1 = star.link.samp %>% sapply(parseStar)
-  df1 = b1 %>% t() %>%  as.data.frame()
-  colnames(df1) = c('name', 'gender', 'age', 'measurements', 'height', 'profile_view', 'status', 'orientation', 'subscribe', 'video_view', 'rank', 'weight', 'info_text', 'verified')
-  write.csv(df1, paste0('star_bio', i, '.csv'), row.names = F)
-}
-
-
-
+# for (i in 1:round(length(star.link)/500)) {
+#   print(i)
+#   star.link.samp = star.link[c(idx:(idx+500))]
+#   idx = idx +500
+#   # print(c(i,idx, paste0('star_bio', i, '.csv')))
+#   b1 = star.link.samp %>% sapply(parseStar)
+#   df1 = b1 %>% t() %>%  as.data.frame()
+#   colnames(df1) = c('name', 'gender', 'age', 'measurements', 'height', 'profile_view', 'status', 'orientation', 'subscribe', 'video_view', 'rank', 'weight', 'info_text', 'verified')
+#   write.csv(df1, paste0('star_bio', i, '.csv'), row.names = F)
+# }
+# 
 
 
 star.link1 = star.link[idx]
-b1 = star.link.samp %>% sapply(parseStar)
+parseStar(star.link1)
+b1 = star.link %>% sapply(parseStar)
 df1 = b1 %>% t() %>%  as.data.frame()
 
 colnames(df1) = c('name', 'gender', 'age', 'measurements', 'height', 'profile_view', 'status', 'orientation', 'subscribe', 'video_view', 'rank', 'weight', 'info_text', 'verified')
 # df1 %>% dim
 # df1 %>% head
-write.csv(df1, 'star_bio2.csv', row.names = F)
+write.csv(df1, 'star_bio_new.csv', row.names = F)
 ```
-
-str cleaning
-```{r}
-df1 = read_csv('star_bio.csv')
-df1 %>% head
-```
-
-
 
 
 ```{r}
@@ -270,12 +235,21 @@ convertNum = function(str){
 # convertNum('580,620,017')
 library(eeptools)
 ageFunc = function(age){
+  
+  if (is.na(age)) {
+    return(NA)
+  }
   if (str_detect(age, '^[0-9]{4}')) {
     age = age %>% ymd
   } else if (str_detect(age, '[0-9]{4}$')) {
     age = age %>% mdy
+  } else {return(NA)}
+  age_year = age_calc(age,units = 'years') 
+  
+  if (age_year >70) {
+    age_year = NA
   }
-  age_calc(age,units = 'years')
+  age_year
 }
 # ageFunc('1993-02-10')
 # df1[2,]$video_view %>% convertNum
@@ -285,8 +259,11 @@ ageFunc = function(age){
 
 
 ```{r}
+df1 = read_csv('star_bio_new.csv')
 
-df.bio = df1 %>% mutate(gender = ifelse(gender %>% str_detect('Male'), 'M', 'F'),
+df.star = df1 %>% mutate(
+              
+  gender = ifelse(gender %>% str_detect('Male'), 'M', 'F'),
                gender = ifelse(is.na(gender), 'F', gender),
                # dimension vars
                d1 = measurements %>% str_extract('[1-9]+[A-Z]'),
@@ -295,16 +272,19 @@ df.bio = df1 %>% mutate(gender = ifelse(gender %>% str_detect('Male'), 'M', 'F')
                d2 = measurements %>% str_extract('-[1-9].-') %>% str_remove_all('-') %>% as.numeric(),
                d3 = measurements %>% str_extract('[1-9].$') %>% str_remove_all('-') %>% as.numeric(),
                status = status %>% str_detect('Active'),
-              subscribe =  subscribe %>% convertNum,
-              video_view1 = video_view %>%  convertNum, # buggy, to be fixed
+              # subscribe =  subscribe %>% convertNum,
+              # # video_view1 = video_view %>%  convertNum, # buggy, to be fixed
               height = height %>% str_extract('[0-9]+ cm') %>% str_remove(' cm') %>% as.numeric(),
               weight = weight %>% str_extract('[0-9]+ lbs') %>% str_remove(' lbs')%>% as.numeric()
                # age1 = age %>% ageFunc() # buggy
-               ) %>% 
-  dplyr::select(gender, d1, d2,d3, cup, height, weight, status, subscribe, video_view1)
-
-df.bio1 = df.bio %>% 
-  mutate(score =  (.5* subscribe %>% log %>% rescale) + (.5* video_view1 %>% log %>% rescale) ) # score is a lin combo of both log view and subscribers standardardized (0-1)
+               ) %>%
+  dplyr::select(name,gender, d1, d2,d3, cup, height, weight, status)
+# those 2 things cant compute using mutate
+df.star$video_view1 = sapply(df1$video_view, convertNum)
+df.star$age = sapply(df1$age, ageFunc)
+df.star$star = df.star$name %>%str_replace_all(' ', '-') %>% tolower
+# df.star$age %>% plot
+df.star %>% head
 ```
 
 
@@ -315,38 +295,18 @@ ggpairs(df.bio1, columns = c('d1', 'd2', 'd3', 'cup', 'height', 'weight', 'video
 
 
 ```{r}
-# df.bio1 = df.bio1 %>% filter(!is.na(score))
-df.bio1 %>% dim
-df.bio1$video_view1 %>% summary
+df.star$star = df.star$name %>%str_replace_all(' ', '-') %>% tolower
+df.join = df.vid %>% full_join(df.star)
+df.join %>% write.csv('df_join.csv', row.names = F)
 
 
-cor(df.bio1$weight,df.bio1$height)
-fit1 = lm(log(video_view1) ~d1 + d2 + d3 + cup + height + weight, data = df.bio1)
+df.join %>% head
+df.join %>% dim
+
+fit1 = lm(log(video_view1) ~d1 + d2 + d3 + cup + height + weight, data = df.join)
 
 summary(fit1) 
 ```
-
-
-```{r}
-d1 = read_csv("star_bio.csv")
-d1 %>% dim
-d2 = read_csv("star_bio1.csv")
-d3 = read_csv("star_bio2.csv")
-
-do.call(rbind, )
-```
-
-# bind all dfs
-```{r}
-x = c("star_bio.csv","star_bio1.csv","star_bio2.csv","star_bio3.csv")
- allframes = lapply(x,function(x)read.csv(x))
- sapply(allframes,nrow)
-
- df.bind = do.call(rbind,allframes)
-write.csv(df.bind, 'star_bio_bind.csv', row.names = F)
-```
-
-
 
 
 
